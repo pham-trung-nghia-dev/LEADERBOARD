@@ -1,4 +1,4 @@
-# BÁO CÁO KỸ THUẬT & HƯỚNG DẪN DỰ ÁN BẢNG XẾP HẠNG (LEADERBOARD)
+﻿# BÁO CÁO KỸ THUẬT & HƯỚNG DẪN DỰ ÁN BẢNG XẾP HẠNG (LEADERBOARD)
 
 > **Mục đích:** Tài liệu giải trình chi tiết về những gì đã làm, cách xây dựng bài toán, cấu trúc dữ liệu, và chức năng của từng API trong dự án.
 
@@ -216,5 +216,6 @@ curl.exe -s "http://127.0.0.1:8000/api/v1/leaderboard?per_page=10" -H "X-User-Id
 curl.exe -s -X POST "http://127.0.0.1:8000/api/v1/scores/update" -H "Content-Type: application/json" -d "{\"user_id\":1,\"points\":100}"
 ```
 
-#   L E A D E R B O A R D  
+#   L E A D E R B O A R D 
+ 
  
