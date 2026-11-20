@@ -125,41 +125,96 @@ Hệ thống cung cấp **3 API chính** tại prefix `/api/v1`:
 * **Mục đích:** Trả về danh sách tất cả các tháng/kỳ đã tổ chức kèm trạng thái `is_active`.
 * **Phục vụ cho:** Các chức năng mở rộng cần dropdown hoặc danh sách lịch sử mùa giải độc lập.
 
-### 4.3. API `GET /api/v1/demo-users`
+### 4.3. API `POST /api/v1/scores/update` (Cập nhật / Ghi nhận điểm thời gian thực)
+* **Mục đích:** Cập nhật điểm cho người chơi **chỉ trong thời gian chương trình đang diễn ra**.
+* **Cơ chế kiểm soát thời gian chặt chẽ:**
+  - Nếu kỳ thi đấu đã đóng (`is_active = false`) hoặc thời gian hiện tại nằm ngoài khoảng `[start_date, end_date]` $\rightarrow$ Hệ thống tự động từ chối với mã **HTTP 403 Forbidden**.
+  - Khi cộng điểm thành công, cột `achieved_at` được gán bằng thời điểm hiện tại (`now()`) để phục vụ luật Tie-breaking (đồng điểm ai đạt trước xếp trên).
+* **Payload JSON:**
+  ```json
+  {
+    "user_id": 1,
+    "points": 100,
+    "season_id": 3
+  }
+  ```
+
+### 4.4. API `GET /api/v1/demo-users`
 * **Mục đích:** Lấy danh sách một số tài khoản mẫu kèm ID và Tên.
 * **Phục vụ cho:** Người chấm bài kiểm thử bằng cách truyền các `user_id` khác nhau vào header `X-User-Id` để xem thứ hạng cá nhân thay đổi chính xác ra sao.
 
 ---
 
-## 5. HƯỚNG DẪN CHẠY & TEST NHANH
+## 5. HƯỚNG DẪN CÀI ĐẶT & CHẠY DỰ ÁN TỪ A ĐẾN Z
 
-### 5.1. Khởi động hệ thống
-```powershell
-cd BangXepHang
+### Bước 1: Clone dự án về máy
+```bash
+git clone https://github.com/pham-trung-nghia-dev/LEADERBOARD.git
+cd LEADERBOARD/BangXepHang
+```
 
-# Chạy tạo DB và nạp đủ 50 dòng cho cả 3 tháng
-php artisan migrate:fresh --seed
+### Bước 2: Cài đặt các gói thư viện (Composer)
+```bash
+composer install
+```
 
-# Bật web server
+### Bước 3: Thiết lập file môi trường (.env) và App Key
+```bash
+# Trên Linux / macOS:
+cp .env.example .env
+
+# Trên Windows PowerShell:
+copy .env.example .env
+
+# Sinh APP_KEY:
+php artisan key:generate
+```
+*Mở file `.env` và cấu hình thông tin kết nối MySQL của bạn (VD: `DB_DATABASE=baitest`, `DB_USERNAME=root`, `DB_PASSWORD=`).*
+
+### Bước 4: Khởi tạo Cơ sở dữ liệu & Nạp dữ liệu mẫu
+Người chấm bài có thể chọn **1 trong 2 cách** tiện lợi sau:
+* **Cách 1 (Khuyên dùng - Tự động 100%):**
+  ```bash
+  php artisan migrate:fresh --seed
+  ```
+  *(Lệnh này tự động tạo các bảng và nạp đủ 50 dòng điểm cho cả 3 tháng).*
+
+* **Cách 2 (Import file SQL có sẵn):**
+  - Tạo database MySQL tên `baitest` (hoặc tên tuỳ chọn).
+  - Import trực tiếp file SQL đã được export sẵn tại:  
+    👉 **`database/leaderboard_database.sql`**
+
+### Bước 5: Khởi chạy Server
+```bash
 php artisan serve
 ```
+👉 Mở trình duyệt và truy cập: **[http://localhost:8000](http://localhost:8000)**
 
-### 5.2. Trải nghiệm trên trình duyệt
-Mở trình duyệt truy cập: **[http://localhost:8000](http://localhost:8000)**
-* Bấm vào các nút **Tháng 09/2026**, **Tháng 10/2026**, **Tháng 11/2026** trên Navbar để xem đổi tháng.
-* Xem bảng 10 người (ngang 2, dài 5).
-* Xem khối **Hạng của bạn** nằm ngay dưới bảng.
-* Bấm chuyển trang **1, 2, 3, 4, 5** ở thanh phân trang dưới cùng.
+---
 
-### 5.3. Test API bằng cURL
+### Bước 6: Chạy Kiểm Thử Tự Động (Automated Testing)
+Dự án đi kèm bộ test Feature kiểm thử toàn diện các case (chọn kỳ, phân trang, tie-breaking, giới hạn thời gian cộng điểm):
+```bash
+php artisan test --filter=LeaderboardApiTest
+```
+*(Kết quả: **5/5 tests PASSED** - 87 assertions).*
+
+---
+
+### Bước 7: Test nhanh các API bằng cURL
 ```powershell
-# Xem Tháng 11 (trang 1, 10 người)
+# 1. Xem bảng xếp hạng Tháng 11 (trang 1, 10 người / trang)
 curl.exe -s "http://127.0.0.1:8000/api/v1/leaderboard?per_page=10"
 
-# Xem Tháng 9 (trang 2, 10 người)
+# 2. Xem bảng xếp hạng Tháng 9 (trang 2, 10 người / trang)
 curl.exe -s "http://127.0.0.1:8000/api/v1/leaderboard?season_id=1&page=2&per_page=10"
 
-# Test giả lập đổi sang xem thứ hạng của User ID #20
+# 3. Test đổi sang xem thứ hạng cá nhân của User ID #20
 curl.exe -s "http://127.0.0.1:8000/api/v1/leaderboard?per_page=10" -H "X-User-Id: 20"
+
+# 4. Test cập nhật / cộng 100 điểm trong thời gian kỳ đang diễn ra
+curl.exe -s -X POST "http://127.0.0.1:8000/api/v1/scores/update" -H "Content-Type: application/json" -d "{\"user_id\":1,\"points\":100}"
 ```
 
+#   L E A D E R B O A R D  
+ 
